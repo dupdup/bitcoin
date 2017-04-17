@@ -1,0 +1,36 @@
+Hi Dhia,
+
+In handleTxs method you want to call isValidTx for each transaction to be handled.
+Each time you find a valid transaction (isValidTx returns true) you'll want to update your UTXO pool.
+
+Why updating and what should be updated?
+
+Well, the valid transaction has spent some UTXO (coins unspent), so you want to remove from the UTXO Pool
+ all the inputs in the transaction.
+
+Also, the valid transaction has generated one ore more UTXOs, its outputs. So you want to add
+ all the new outputs to the UTXO pool.
+
+Then you continue handling another new transaction. If any later transaction claims an UTXO consumed by
+ a previous transaction (a double spend) that transaction won't be accepted as your isValidTx call
+ it is not going to find that UTXO in the pool.
+
+But beware that a later transaction can publish as its outputs an input claimed but a previous
+ declined transaction so you will have to iterate again until you consider
+ you have got a mutually valid transaction set of maximal size.
+
+
+//You can create a new UTXO object from any input of a transaction and
+// then you can obtain the output referred from your current pool or
+// any other temporary pool you have created, if it is contained.
+//        UTXO utxo = new UTXO(input.prevTxHash, input.outputIndex);
+//        Transaction.Output output = utxoPool.getTxOutput(utxo);
+
+
+Each transaction takes one or more unspent UTXO's, destroys them and
+produces one or more new UTXO's of total value less or equal to input.
+
+Each transaction input is pointer to UTXO (unspent transaction output) from
+some past transaction (transaction hash + integer index,
+since transaction can produce more than one output).
+Signature is needed to prove owner's authorization to spend his UTXO.
