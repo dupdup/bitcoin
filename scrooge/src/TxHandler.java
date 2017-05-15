@@ -1,6 +1,10 @@
+import java.util.ArrayList;
+import java.util.Arrays;
+
 public class TxHandler {
 
     UTXOPool utxoPool;
+    UTXOPool rawPool;
     /**
      * Creates a public ledger whose current UTXOPool (collection of unspent transaction outputs) is
      * {@code utxoPool}. This should make a copy of utxoPool by using the UTXOPool(UTXOPool uPool)
@@ -8,6 +12,7 @@ public class TxHandler {
      */
     public TxHandler(UTXOPool utxoPool) {
          utxoPool = new UTXOPool(utxoPool);
+         rawPool = new UTXOPool(utxoPool);
         // IMPLEMENT THIS
     }
 
@@ -26,11 +31,11 @@ public class TxHandler {
 //You can create a new UTXO object from any input of a transaction and
 // then you can obtain the output referred from your current pool or
 // any other temporary pool you have created, if it is contained.
-//        UTXO utxo = new UTXO(input.prevTxHash, input.outputIndex);
-//        Transaction.Output output = utxoPool.getTxOutput(utxo);
-        boolean signature = tx.getInputs().stream().anyMatch((Transaction.Input i)->{
-            Transaction.Output o = tx.getOutput(i.outputIndex);
-            return Crypto.verifySignature(o.address,tx.getHash(),i.signature);
+        boolean signature = tx.getInputs().stream().anyMatch((Transaction.Input input)->{
+            UTXO utxo = new UTXO(input.prevTxHash, input.outputIndex);
+            Transaction.Output o = utxoPool.getTxOutput(utxo);
+            if(o == null) return false;
+            return Crypto.verifySignature(o.address,input.prevTxHash,input.signature);
         });
         if(!signature) return false;
         double sumOfOut = tx.getOutputs().stream().mapToDouble((Transaction.Output t)->t.value).sum();
@@ -44,8 +49,26 @@ public class TxHandler {
      */
     public Transaction[] handleTxs(Transaction[] possibleTxs) {
         // IMPLEMENT THIS
+        Transaction[] accepted = new Transaction[possibleTxs.length];
+        Arrays.stream(possibleTxs).forEach((Transaction t)->{
+            UTXOPool tp = new UTXOPool();
+            t.getOutputs().forEach((Transaction.Output o) -> {
+                UTXO ut = new UTXO(t.getRawTx(), t.getOutputs().indexOf(o));
+                if(!this.rawPool.contains(ut) && !tp.contains(ut)){
+                    tp.addUTXO(ut,o);
+                }
+            });
+            tp.getAllUTXO().forEach((UTXO u )->this.rawPool.addUTXO(u,tp.getTxOutput(u)));
+        });
+//        while(true) {
+            for (Transaction possibleTx : possibleTxs) {
+                if (!isValidTx(possibleTx)) {
 
-        return null;
+                }
+            }
+
+//        }
+        return accepted;
     }
 
 }
